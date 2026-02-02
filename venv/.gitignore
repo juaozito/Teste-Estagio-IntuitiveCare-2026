@@ -1,12 +1,8 @@
-# Ambiente Virtual
-venv/
-.venv/
-__pycache__/
-
-# Dados (Não queremos subir arquivos CSV de 500MB)
+# Ignorar arquivos brutos e pesados
+dados/raw/
 *.zip
-*.csv
+__pycache__/
+.venv/
 
-# Logs e arquivos temporários
-*.log
-.vscode/
+# Permitir apenas os resultados finais
+!dados/processados/*.csv
