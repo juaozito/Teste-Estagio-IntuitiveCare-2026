@@ -1,37 +1,23 @@
--- ETAPA 3: QUERIES ANALÍTICAS (CONFORME REQUISITO 3.4 DO PDF)
+import pandas as pd
 
--- Query 1: Top 5 operadoras com maior crescimento percentual (1T vs 3T)
-WITH trimestres AS (
-    SELECT razao_social, 
-           SUM(CASE WHEN trimestre LIKE '%1T%' THEN valor_despesa ELSE 0 END) as v1,
-           SUM(CASE WHEN trimestre LIKE '%3T%' THEN valor_despesa ELSE 0 END) as v3
-    FROM despesas_consolidadas
-    GROUP BY razao_social
-)
-SELECT razao_social, 
-       ((v3 - v1) / NULLIF(v1, 0)) * 100 as crescimento_pct
-FROM trimestres
-WHERE v1 > 0 AND v3 > 0
-ORDER BY crescimento_pct DESC
-LIMIT 5;
+def cruzar_dados():
+    print("--- Eu estou unindo as despesas com os nomes das empresas ---")
+    
+    # Eu carrego os dois arquivos que eu preparei antes
+    despesas = pd.read_csv("dados/processados/consolidado_despesas.csv")
+    cadastro = pd.read_csv("dados/processados/operadoras_limpas.csv")
 
--- Query 2: Distribuição por UF (Top 5) + Média por operadora na UF
-SELECT uf, 
-       SUM(valor_despesa) as total_despesa,
-       AVG(valor_despesa) as media_por_operadora
-FROM despesas_consolidadas
-GROUP BY uf
-ORDER BY total_despesa DESC
-LIMIT 5;
+    # AQUI ESTÁ O MEU SEGREDO: Eu limpo o Registro ANS para garantir que '00123' e '123' sejam iguais
+    # Eu transformo em texto, tiro espaços e removo o '0' da esquerda
+    despesas['CHAVE'] = despesas['CNPJ'].astype(str).str.strip().str.lstrip('0')
+    cadastro['CHAVE'] = cadastro['REGISTRO_ANS'].astype(str).str.strip().str.lstrip('0')
 
--- Query 3: Operadoras acima da média geral em pelo menos 2 trimestres
-SELECT razao_social
-FROM (
-    SELECT razao_social, trimestre, SUM(valor_despesa) as valor,
-           (SELECT AVG(valor_despesa) FROM despesas_consolidadas) as media_geral
-    FROM despesas_consolidadas
-    GROUP BY razao_social, trimestre
-) t
-WHERE valor > media_geral
-GROUP BY razao_social
-HAVING COUNT(DISTINCT trimestre) >= 2;
+    # Eu faço o MERGE (o cruzamento). Eu uso 'left' para manter todas as despesas que eu encontrei
+    relatorio = pd.merge(despesas, cadastro, on='CHAVE', how='left')
+
+    # Eu salvo o relatório final que vai alimentar o meu Banco de Dados
+    relatorio.to_csv("dados/processados/relatorio_final.csv", index=False, encoding='utf-8')
+    print("Relatório final gerado com sucesso!")
+
+if __name__ == "__main__":
+    cruzar_dados()

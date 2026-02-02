@@ -1,56 +1,47 @@
-import requests
-import os
-import zipfile
+import requests, os, zipfile, urllib3
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-import urllib3
-import time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-URL_BASE = "https://dadosabertos.ans.gov.br/FTP/PDA/demonstracoes_contabeis/"
-URL_CADASTRO = "https://dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude_ativas/"
-PASTA_RAW = "dados/raw/"
-HEADERS = {'User-Agent': 'Mozilla/5.0'}
 
-def baixar_com_retry(session, url, caminho):
-    for i in range(3):
-        try:
-            with session.get(url, stream=True, timeout=120, verify=False) as r:
-                r.raise_for_status()
-                with open(caminho, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=1024*1024): f.write(chunk)
-            return True
-        except Exception: time.sleep(2)
-    return False
-
-def baixar_arquivos():
-    if not os.path.exists(PASTA_RAW): os.makedirs(PASTA_RAW)
+def baixar_tudo():
+    print("\n[INICIANDO] Buscando os 3 trimestres mais recentes na ANS...")
+    path_raw = "dados/raw/"
+    if not os.path.exists(path_raw): os.makedirs(path_raw)
     session = requests.Session()
-    session.headers.update(HEADERS)
+    session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
-    # 1. Download Cadastro
-    r_cad = session.get(URL_CADASTRO, verify=False)
-    soup_cad = BeautifulSoup(r_cad.text, 'html.parser')
-    link_cad = urljoin(URL_CADASTRO, next(a.get('href') for a in soup_cad.find_all('a') if 'Relatorio_cadop' in a.get('href')))
-    baixar_com_retry(session, link_cad, os.path.join(PASTA_RAW, "operadoras_ativas.csv"))
+    # Cadastro
+    print("[BUSCANDO] Localizando cadastro de operadoras...")
+    url_cad_base = "https://dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude_ativas/"
+    soup_cad = BeautifulSoup(session.get(url_cad_base, verify=False).text, 'html.parser')
+    link_cad = urljoin(url_cad_base, next(a.get('href') for a in soup_cad.find_all('a') if '.csv' in a.get('href').lower()))
+    with open(os.path.join(path_raw, "operadoras_ativas.csv"), 'wb') as f:
+        f.write(session.get(link_cad, verify=False).content)
 
-    # 2. Download 3 Últimos Trimestres
-    r_base = session.get(URL_BASE, verify=False)
-    anos = sorted([a.get('href').replace('/','') for a in BeautifulSoup(r_base.text, 'html.parser').find_all('a') if a.get('href').replace('/','').isdigit()], reverse=True)
+    # 3 Últimos Trimestres
+    print("[ANALISANDO] Verificando pastas de demonstrações contábeis...")
+    url_base = "https://dadosabertos.ans.gov.br/FTP/PDA/demonstracoes_contabeis/"
+    soup_root = BeautifulSoup(session.get(url_base, verify=False).text, 'html.parser')
+    anos = sorted([a.get('href').replace('/', '') for a in soup_root.find_all('a') if a.get('href').replace('/', '').isdigit()], reverse=True)
     
-    baixados = 0
+    arquivos_encontrados = []
     for ano in anos:
-        if baixados >= 3: break
-        url_ano = urljoin(URL_BASE, f"{ano}/")
-        r_ano = session.get(url_ano, verify=False)
-        links = [urljoin(url_ano, a.get('href')) for a in BeautifulSoup(r_ano.text, 'html.parser').find_all('a') if '.zip' in a.get('href').lower()]
-        for link in sorted(links, reverse=True):
-            if baixados >= 3: break
-            caminho = os.path.join(PASTA_RAW, link.split('/')[-1])
-            if baixar_com_retry(session, link, caminho):
-                with zipfile.ZipFile(caminho, 'r') as z: z.extractall(PASTA_RAW)
-                baixados += 1
-    print("✅ Etapa 1 Finalizada.")
+        if len(arquivos_encontrados) >= 3: break
+        url_ano = urljoin(url_base, f"{ano}/")
+        soup_ano = BeautifulSoup(session.get(url_ano, verify=False).text, 'html.parser')
+        zips = sorted([urljoin(url_ano, a.get('href')) for a in soup_ano.find_all('a') if '.zip' in a.get('href').lower()], reverse=True)
+        for z in zips:
+            if len(arquivos_encontrados) < 3: arquivos_encontrados.append(z)
+
+    for i, link in enumerate(arquivos_encontrados):
+        nome = link.split('/')[-1]
+        print(f"[DOWNLOAD {i+1}/3] {nome}...")
+        dest = os.path.join(path_raw, nome)
+        with open(dest, 'wb') as f: f.write(session.get(link, verify=False).content)
+        with zipfile.ZipFile(dest, 'r') as z: z.extractall(path_raw)
+    
+    print("✅ [OK] Arquivos prontos!")
 
 if __name__ == "__main__":
-    baixar_arquivos()
+    baixar_tudo()

@@ -1,40 +1,25 @@
 import pandas as pd
-import os
+import unicodedata, re
 
-def limpar_cadastro():
-    print("--- Etapa 2: Limpeza Cadastral (Ajuste de Colunas) ---")
-    arq_bruto = "dados/raw/operadoras_ativas.csv"
-    arq_limpo = "dados/processados/operadoras_limpas.csv"
+def limpar_texto_perfeito(texto):
+    if pd.isna(texto): return ""
+    nfkd = unicodedata.normalize('NFKD', str(texto))
+    texto_limpo = "".join([c for c in nfkd if not unicodedata.combining(c)])
+    texto_limpo = texto_limpo.replace('ç', 'c').replace('Ç', 'C')
+    texto_limpo = re.sub(r'[^A-Z0-9\s]', '', texto_limpo.upper())
+    return " ".join(texto_limpo.split())
 
-    if not os.path.exists(arq_bruto):
-        print(f"❌ Arquivo bruto não encontrado em: {arq_bruto}")
-        return
-
-    # Lemos o arquivo pulando as 3 linhas de lixo da ANS
-    df = pd.read_csv(arq_bruto, sep=None, engine='python', encoding='latin-1', skiprows=3, header=None)
+def limpar_cad():
+    print("\n[LIMPANDO] Higienizando cadastro de operadoras...")
+    df = pd.read_csv("dados/raw/operadoras_ativas.csv", sep=None, engine='python', encoding='latin-1', skiprows=3)
+    df = df.rename(columns={df.columns[0]: 'REGISTRO_ANS', df.columns[2]: 'RAZAO_SOCIAL', df.columns[10]: 'UF'})
     
-    # Lista com 20 nomes para bater com o seu arquivo
-    colunas = [
-        'REGISTRO_ANS', 'CNPJ', 'RAZAO_SOCIAL', 'NOME_FANTASIA', 'MODALIDADE', 
-        'LOGRADOURO', 'NUMERO', 'COMPLEMENTO', 'BAIRRO', 'CIDADE', 'UF', 
-        'CEP', 'DDD', 'TELEFONE', 'FAX', 'EMAIL', 'REPRESENTANTE', 'CARGO', 
-        'DATA_REGISTRO', 'COLUNA_EXTRA' # Adicionamos a 20ª coluna aqui
-    ]
+    df['RAZAO_SOCIAL'] = df['RAZAO_SOCIAL'].apply(limpar_texto_perfeito)
+    df['UF'] = df['UF'].apply(limpar_texto_perfeito)
+    df['REGISTRO_ANS'] = df['REGISTRO_ANS'].astype(str).str.replace(r'[^0-9]', '', regex=True)
     
-    # Ajusta a lista dinamicamente caso o arquivo mude de novo
-    if len(df.columns) != len(colunas):
-        print(f"⚠️ Aviso: O arquivo tem {len(df.columns)} colunas, ajustando nomes...")
-        novas_cols = colunas[:len(df.columns)]
-        # Se o arquivo tiver MAIS de 20, preenche com 'EXTRA_N'
-        while len(novas_cols) < len(df.columns):
-            novas_cols.append(f"EXTRA_{len(novas_cols)}")
-        df.columns = novas_cols
-    else:
-        df.columns = colunas
-
-    os.makedirs("dados/processados/", exist_ok=True)
-    df.to_csv(arq_limpo, index=False, encoding='utf-8')
-    print(f"✅ Cadastro limpo e salvo com {len(df)} operadoras.")
+    df[['REGISTRO_ANS', 'RAZAO_SOCIAL', 'UF']].to_csv("dados/processados/operadoras_limpas.csv", index=False, sep=';', encoding='utf-8-sig')
+    print("✅ [OK] Cadastro pronto!")
 
 if __name__ == "__main__":
-    limpar_cadastro()
+    limpar_cad()

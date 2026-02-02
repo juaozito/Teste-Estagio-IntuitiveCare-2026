@@ -4,8 +4,6 @@ venv/
 __pycache__/
 
 # Dados (Não queremos subir arquivos CSV de 500MB)
-dados/raw/
-dados/processados/
 *.zip
 *.csv
 

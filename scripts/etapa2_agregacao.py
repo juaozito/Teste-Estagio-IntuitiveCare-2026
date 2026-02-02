@@ -1,53 +1,60 @@
 import pandas as pd
 import os
 
-def encontrar_coluna(df, possiveis_nomes):
-    for nome in possiveis_nomes:
-        if nome.upper() in [c.upper() for c in df.columns]:
-            # Retorna o nome exato como está no DF (ex: se o DF tem 'uf', retorna 'uf')
-            return [c for c in df.columns if c.upper() == nome.upper()][0]
-    return None
-
-def agregar_dados():
-    print("--- Etapa 2.3: Agregação e Estatísticas ---")
-    caminho_input = "dados/processados/relatorio_final.csv"
-    caminho_output = "dados/processados/despesas_agregadas.csv"
-
-    if not os.path.exists(caminho_input):
-        print(f"❌ Arquivo {caminho_input} não encontrado!")
+def agregar():
+    print("\n[ANALISE CRITICA] Verificando dados e gerando estatisticas (Requisito 2.2)...")
+    path_desp = "dados/processados/consolidado_despesas.csv"
+    path_cad = "dados/processados/operadoras_limpas.csv"
+    
+    if not os.path.exists(path_desp):
+        print("❌ [ERRO] Arquivo de despesas nao encontrado!")
         return
 
-    df = pd.read_csv(caminho_input)
+    # 1. Leitura dos dados
+    df_desp = pd.read_csv(path_desp, sep=';', dtype=str)
+    cad = pd.read_csv(path_cad, sep=';', dtype=str)
 
-    # Identifica os nomes reais das colunas no CSV (Resiliência)
-    col_razao = encontrar_coluna(df, ['RAZAOSOCIAL', 'RAZAO_SOCIAL', 'NM_OPERADORA'])
-    col_uf = encontrar_coluna(df, ['UF', 'ESTADO'])
-    col_valor = encontrar_coluna(df, ['VALORDESPESAS', 'VALOR_DESPESA', 'VL_SALDO_FINAL'])
+    # 2. Conversao para numero (Limpando o R$)
+    df_desp['V_NUM'] = df_desp['VALOR'].str.replace('R$ ', '', regex=False).str.replace('.', '', regex=False).astype(float)
 
-    if not col_razao or not col_uf or not col_valor:
-        print(f"❌ Erro: Colunas necessárias não encontradas. Colunas no arquivo: {list(df.columns)}")
-        return
+    # 3. TRATAMENTO DE NEGATIVOS (Requisito de Pensamento Critico do PDF)
+    # Valores negativos em despesas operacionais sao inconsistencias que distorcem a media
+    df_desp = df_desp[df_desp['V_NUM'] > 0]
 
-    print(f"Agrupando por {col_razao} e {col_uf}...")
+    # 4. JOIN: Unindo com cadastro (Ignora quem nao tem Razao Social)
+    df = pd.merge(df_desp, cad, on='REGISTRO_ANS', how='left').dropna(subset=['RAZAO_SOCIAL'])
 
-    # Requisito 2.3: Agrupar e calcular Soma, Média e Desvio Padrão
-    agregado = df.groupby([col_razao, col_uf]).agg({
-        col_valor: ['sum', 'mean', 'std']
-    }).reset_index()
+    # 5. CALCULOS ESTATISTICOS
+    resumo = df.groupby(['RAZAO_SOCIAL', 'UF']).agg(
+        TOTAL_GASTO=('V_NUM', 'sum'),
+        MEDIA_GASTO=('V_NUM', 'mean'),
+        DESVIO_PADRAO=('V_NUM', 'std')
+    ).reset_index()
 
-    # Renomear colunas para ficar limpo
-    agregado.columns = ['RazaoSocial', 'UF', 'TotalDespesas', 'MediaDespesas', 'DesvioPadraoDespesas']
+    # Tratando o Desvio Padrao de quem tem apenas 1 registro (NaN -> 0)
+    resumo['DESVIO_PADRAO'] = resumo['DESVIO_PADRAO'].fillna(0)
 
-    # Preencher Desvio Padrão nulo com 0 (acontece quando só tem 1 registro para a operadora)
-    agregado['DesvioPadraoDespesas'] = agregado['DesvioPadraoDespesas'].fillna(0)
+    # 6. ANALISE DE PERFIL (Diferencial de Interpretacao de Dados)
+    def classificar_perfil(row):
+        if row['MEDIA_GASTO'] == 0: return "SEM DADOS"
+        # Se o desvio padrao for maior que 50% da media, o gasto e muito instavel
+        variancia = row['DESVIO_PADRAO'] / row['MEDIA_GASTO']
+        if variancia > 0.5: return "ALTA VARIACAO"
+        return "GASTO ESTAVEL"
 
-    # Ordenar por valor total (maior para menor) conforme pedido no PDF
-    agregado = agregado.sort_values(by='TotalDespesas', ascending=False)
+    print("[PERFIL] Aplicando analise de variancia nos gastos...")
+    resumo['ANALISE_PERFIL'] = resumo.apply(classificar_perfil, axis=1)
 
-    # Salvar resultado
-    agregado.to_csv(caminho_output, index=False, encoding='utf-8')
-    print(f"✅ Sucesso! Arquivo gerado: {caminho_output}")
-    print(f"📊 Total de grupos: {len(agregado)}")
+    # Ordenacao por maior gasto
+    resumo = resumo.sort_values(by='TOTAL_GASTO', ascending=False)
+
+    # 7. FORMATACAO FINAL
+    print("[FORMATANDO] Convertendo para padrao monetario R$...")
+    for col in ['TOTAL_GASTO', 'MEDIA_GASTO', 'DESVIO_PADRAO']:
+        resumo[col] = resumo[col].apply(lambda x: f"R$ {int(round(x)):,}".replace(',', '.'))
+
+    resumo.to_csv("dados/processados/consolidado_ans_final.csv", index=False, sep=';', encoding='utf-8-sig')
+    print("✅ [SUCESSO] Relatorio com Desvio Padrao e Analise de Perfil concluido!")
 
 if __name__ == "__main__":
-    agregar_dados()
+    agregar()
