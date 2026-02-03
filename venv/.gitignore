@@ -1,8 +1,17 @@
-# Ignorar arquivos brutos e pesados
-dados/raw/
-*.zip
-__pycache__/
-.venv/
+# Ignorar arquivos de dados (CSVs e Planilhas)
+dados/processados/
+*.csv
+*.xlsx
 
-# Permitir apenas os resultados finais
-!dados/processados/*.csv
+# Ignorar arquivos SQL gerados automaticamente
+scripts/sql/carga_dados.sql
+
+# Ignorar pastas de ambiente virtual do Python (caso tenha)
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Ignorar arquivos de configuração do sistema
+.DS_Store
+Thumbs.db

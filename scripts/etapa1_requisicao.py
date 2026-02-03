@@ -11,7 +11,7 @@ def baixar_tudo():
     Trade-off: Baixar via stream (chunks) em vez de carregar o arquivo inteiro na RAM.
     Isso evita o erro IncompleteRead em conexoes instaveis com o servidor da ANS.
     """
-    print("\n[INICIANDO] Buscando dados na ANS...")
+    print("\n[REQUISICAO] Iniciando busca de dados no portal da ANS")
     path_raw = "dados/raw/"
     if not os.path.exists(path_raw): os.makedirs(path_raw)
     
@@ -19,7 +19,7 @@ def baixar_tudo():
     session.headers.update({'User-Agent': 'Mozilla/5.0'})
 
     # 1. Busca Cadastro
-    print("[BUSCANDO] Cadastro de operadoras...")
+    print("[REQUISICAO] Localizando e baixando arquivo de cadastro de operadoras")
     url_cad_base = "https://dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude_ativas/"
     try:
         soup_cad = BeautifulSoup(session.get(url_cad_base, verify=False, timeout=30).text, 'html.parser')
@@ -28,10 +28,10 @@ def baixar_tudo():
         with open(os.path.join(path_raw, "operadoras_ativas.csv"), 'wb') as f:
             f.write(session.get(link_cad, verify=False).content)
     except Exception as e:
-        print(f"❌ [ERRO] Falha ao buscar cadastro: {e}")
+        print(f"[ERRO] Falha ao buscar cadastro: {e}")
 
     # 2. Busca 3 ultimos trimestres
-    print("[ANALISANDO] Localizando arquivos de demonstracoes contabeis...")
+    print("[REQUISICAO] Analisando diretorio de demonstracoes contabeis para localizar ultimos trimestres")
     url_base = "https://dadosabertos.ans.gov.br/FTP/PDA/demonstracoes_contabeis/"
     root_html = session.get(url_base, verify=False).text
     soup_root = BeautifulSoup(root_html, 'html.parser')
@@ -50,7 +50,7 @@ def baixar_tudo():
     for i, link in enumerate(arquivos_links):
         nome = link.split('/')[-1]
         dest = os.path.join(path_raw, nome)
-        print(f"[DOWNLOAD {i+1}/3] {nome}...")
+        print(f"[REQUISICAO] Baixando arquivo {i+1} de 3: {nome}")
         
         try:
             # stream=True permite baixar o arquivo aos poucos
@@ -62,13 +62,14 @@ def baixar_tudo():
                             f.write(chunk)
             
             # Extração
+            print(f"[REQUISICAO] Extraindo conteudo do arquivo: {nome}")
             with zipfile.ZipFile(dest, 'r') as z:
                 z.extractall(path_raw)
                 
         except Exception as e:
-            print(f"⚠️ [AVISO] Falha no download de {nome}: {e}. Tente rodar novamente.")
+            print(f"[AVISO] Falha no download de {nome}: {e}")
 
-    print("✅ [OK] Processo de requisicao finalizado!")
+    print("[REQUISICAO] Processo de requisicao e extracao finalizado")
 
 if __name__ == "__main__":
     baixar_tudo()

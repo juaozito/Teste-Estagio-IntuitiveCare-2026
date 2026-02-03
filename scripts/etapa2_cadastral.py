@@ -15,10 +15,11 @@ def limpar_texto_perfeito(texto):
     return " ".join(texto_limpo.split())
 
 def limpar_cad():
-    print("\n[LIMPANDO] Higienizando cadastro de operadoras...")
+    print("\n[CADASTRAL] Iniciando higienizacao do cadastro de operadoras")
     df = pd.read_csv("dados/raw/operadoras_ativas.csv", sep=None, engine='python', encoding='latin-1', skiprows=3)
     
     # Padronização de nomes de colunas essenciais
+    print("[CADASTRAL] Normalizando nomes, UFs e registros ANS")
     df = df.rename(columns={df.columns[0]: 'REGISTRO_ANS', df.columns[2]: 'RAZAO_SOCIAL', df.columns[10]: 'UF'})
     
     df['RAZAO_SOCIAL'] = df['RAZAO_SOCIAL'].apply(limpar_texto_perfeito)
@@ -27,7 +28,7 @@ def limpar_cad():
     df['REGISTRO_ANS'] = df['REGISTRO_ANS'].astype(str).str.replace(r'[^0-9]', '', regex=True)
     
     df[['REGISTRO_ANS', 'RAZAO_SOCIAL', 'UF']].to_csv("dados/processados/operadoras_limpas.csv", index=False, sep=';', encoding='utf-8-sig')
-    print("✅ [OK] Cadastro limpo e normalizado!")
+    print("[CADASTRAL] Cadastro normalizado com sucesso")
 
 if __name__ == "__main__":
     limpar_cad()

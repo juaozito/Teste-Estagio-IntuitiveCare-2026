@@ -1,52 +1,57 @@
 import pandas as pd
 import os
 
+def formatar_moeda_br(valor):
+    """Formata o número para o padrão monetário brasileiro com R$: R$ 1.234,56"""
+    if pd.isna(valor): return "R$ 0,00"
+    # Formata com milhar em vírgula e decimal em ponto, depois inverte para padrão BR
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 def agregar():
-    """
-    ETAPA 2.2: Agregação e indicadores.
-    Pensamento Crítico: Tratamento de desvio padrão nulo para operadoras com um único registro.
-    """
-    print("\n[AGREGANDO] Gerando estatísticas finais...")
-    path_desp = "dados/processados/consolidado_despesas.csv"
-    path_cad = "dados/processados/operadoras_limpas.csv"
+    print("\n[AGREGACAO] Gerando estatisticas com R$ (Tarefa 2.3)")
+    path_input = "dados/processados/relatorio_enriquecido.csv"
     
-    if not os.path.exists(path_desp): return
+    if not os.path.exists(path_input):
+        print(f"[ERRO] Arquivo {path_input} nao encontrado.")
+        return
 
-    df_desp = pd.read_csv(path_desp, sep=';', dtype=str)
-    cad = pd.read_csv(path_cad, sep=';', dtype=str)
+    # 1. Carrega os dados (Usando dtype str para preservar formatos)
+    df = pd.read_csv(path_input, sep=';', dtype=str)
 
-    # Reverte R$ para cálculo
-    df_desp['V_NUM'] = df_desp['VALOR'].str.replace('R$ ', '', regex=False).str.replace('.', '', regex=False).astype(float)
-    
-    # Merge ignorando quem não tem cadastro (Dados Vazios)
-    df = pd.merge(df_desp, cad, on='REGISTRO_ANS', how='left').dropna(subset=['RAZAO_SOCIAL'])
+    # 2. Conversao para calculo numerico
+    print("[AGREGACAO] Convertendo valores para calculo...")
+    # Limpa possíveis R$, pontos e troca vírgula por ponto para virar float
+    df['V_NUM'] = (df['ValorDespesas']
+                   .str.replace('R$', '', regex=False)
+                   .str.replace('.', '', regex=False)
+                   .str.replace(',', '.', regex=False)
+                   .str.strip()
+                   .astype(float))
 
-    # Agrupamento
-    resumo = df.groupby(['RAZAO_SOCIAL', 'UF']).agg(
-        TOTAL_GASTO=('V_NUM', 'sum'),
-        MEDIA_GASTO=('V_NUM', 'mean'),
-        DESVIO_PADRAO=('V_NUM', 'std')
+    # 3. Agrupamento (Item 2.3 do PDF)
+    print("[AGREGACAO] Agrupando por Operadora e UF...")
+    resumo = df.groupby(['RazaoSocial', 'UF']).agg(
+        Total_Despesas=('V_NUM', 'sum'),
+        Media_Trimestral=('V_NUM', 'mean'),
+        Desvio_Padrao=('V_NUM', 'std')
     ).reset_index()
 
-    # Tratamento para registro único: Desvio padrão de 1 valor é indefinido (NaN). 
-    # Definimos como 0 para clareza do relatório.
-    resumo['DESVIO_PADRAO'] = resumo['DESVIO_PADRAO'].fillna(0)
+    # 4. Tratamento de Desvio Padrao
+    resumo['Desvio_Padrao'] = resumo['Desvio_Padrao'].fillna(0)
 
-    # Classificação de Perfil
-    def classificar(row):
-        if row['MEDIA_GASTO'] == 0: return "SEM DADOS"
-        variancia = row['DESVIO_PADRAO'] / row['MEDIA_GASTO']
-        return "ALTA VARIACAO" if variancia > 0.5 else "GASTO ESTAVEL"
+    # 5. Ordenacao por valor total (Maior para Menor)
+    resumo = resumo.sort_values(by='Total_Despesas', ascending=False)
 
-    resumo['ANALISE_PERFIL'] = resumo.apply(classificar, axis=1)
+    # 6. Aplicacao da formatacao com R$
+    print("[AGREGACAO] Aplicando R$ e formatacao brasileira...")
+    for col in ['Total_Despesas', 'Media_Trimestral', 'Desvio_Padrao']:
+        resumo[col] = resumo[col].apply(formatar_moeda_br)
 
-    # Ordenação e Formatação
-    resumo = resumo.sort_values(by='TOTAL_GASTO', ascending=False)
-    for col in ['TOTAL_GASTO', 'MEDIA_GASTO', 'DESVIO_PADRAO']:
-        resumo[col] = resumo[col].apply(lambda x: f"R$ {int(round(x)):,}".replace(',', '.'))
-
-    resumo.to_csv("dados/processados/consolidado_ans_final.csv", index=False, sep=';', encoding='utf-8-sig')
-    print("✅ [SUCESSO] Relatório com análise de variância concluído!")
+    # 7. Salvamento Final
+    output_name = "dados/processados/despesas_agregadas.csv"
+    resumo.to_csv(output_name, index=False, sep=';', encoding='utf-8-sig')
+    
+    print(f"[SUCESSO] Arquivo '{output_name}' gerado com R$.")
 
 if __name__ == "__main__":
     agregar()
