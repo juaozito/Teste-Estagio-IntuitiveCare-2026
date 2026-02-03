@@ -1,79 +1,107 @@
-🩺 Relatório de Desenvolvimento - TESTE DE ENTRADA PARA ESTAGIÁRIOS v2.0
+# 🩺 Sistema de Gestão de Operadoras ANS - Teste Estagiário v2.0
 
-Este projeto apresenta uma solução completa para o desafio técnico da Intuitive Care, cobrindo o ciclo de vida de um engenheiro de dados e desenvolvedor full-stack: Extração (Web Scraping), Transformação (Pandas), Carga (SQL), Backend (FastAPI) e Frontend (Vue.js).
+Este projeto é uma solução Full Stack desenvolvida para o desafio técnico da **Intuitive Care**. O sistema automatiza o ciclo completo de dados: extração do portal da ANS, tratamento de inconsistências, armazenamento relacional e visualização através de um dashboard interativo.
 
-📂 Estrutura do Repositório
+---
 
-backend/: API em FastAPI e lógica de conexão com o banco.
+## 📂 Estrutura do Projeto
 
-frontend/: Interface em Vue.js 3 para visualização dos dados.
+* **`scripts/`**: Pipeline de dados composta por 6 etapas (Python/Pandas).
+  
+* **`backend/`**: API REST desenvolvida com FastAPI.
+  
+* **`frontend/`**: Interface SPA com Vue.js 3 (Arquivos estáticos).
+  
+* **`sql/`**: Scripts de estrutura (`schema.sql`) e consultas de negócio (`analise.sql`).
 
-scripts/: Pipeline de ETL (Etapas 1, 2 e 3 do teste).
+---
 
-sql/: Scripts de criação de tabelas (schema.sql) e consultas analíticas (analise.sql).
+## 🛠️ Instruções de Execução
 
-🛠️ Como Instalar e Rodar
+### 1. Pré-requisitos
 
-1. Banco de Dados (MySQL 8.0)
+* Python 3.10+
+  
+* MySQL Server 8.0
+  
+* Navegador Web (Chrome/Firefox/Edge)
+
+### 2. Configuração do Banco de Dados
+
+1.  No seu MySQL, crie o schema: `CREATE DATABASE intuitivecare;`.
    
-Crie o banco de dados intuitivecare no seu MySQL.
+2.  Execute o arquivo `sql/schema.sql` para criar as tabelas e relações.
 
-Execute o arquivo schema.sql para criar as tabelas operadoras e despesas_consolidadas.
+### ⚙️ 3. Pipeline de Dados (ETL)
 
-Execute as queries de analise.sql para validar os requisitos de lógica SQL.
+Para processar e carregar os dados, execute os scripts na pasta `scripts/` seguindo esta ordem exata:
 
-2. Backend (API Python)
+1.  `python scripts/etapa1_requisicao.py` - Baixa os arquivos ZIP brutos da ANS.
    
-Aceda à pasta backend.
+2.  `python scripts/etapa1_processamento.py` - Extrai e realiza a primeira limpeza dos CSVs.
+   
+3.  `python scripts/etapa2_cadastral.py` - Normaliza os dados cadastrais das operadoras ativas.
+   
+4.  `python scripts/etapa2_join.py` - Cruza as despesas financeiras com o cadastro via CNPJ/RegistroANS.
+   
+5.  `python scripts/etapa2_agregacao.py` - Calcula somas, médias e desvios padrões por UF.
+    
+6.  `python scripts/etapa3_banco_dados.py` - Gera e executa a carga final no MySQL.
 
-Instale as dependências: pip install -r requirements.txt.
+### 🚀 4. Interface e API
 
-Configuração de Ambiente: Renomeie o arquivo .env.example para .env e insira as suas credenciais do MySQL.
+1.  Acesse a pasta `backend`.
+   
+2.  Instale as dependências: `pip install -r requirements.txt`.
+   
+3.  Configure seu `.env` com as credenciais do MySQL.
+   
+4.  Rode o comando: `python main.py`.
+   
+5.  Abra o navegador em: `http://localhost:8000/index.html`.
 
-Inicie o servidor: python main.py.
+---
 
-A API estará disponível em: http://localhost:8000
+## 🧠 Trade-offs Técnicos e Justificativas (Requisitos PDF v2.0)
 
-3. Frontend (Dashboard Vue.js)
+Abaixo estão as decisões fundamentadas tomadas durante o desenvolvimento:
 
-Aceda à pasta frontend.
+### **1. Processamento de Dados (ETL)**
 
-Instale os pacotes: npm install.
+* **Processamento Incremental:** Decidi utilizar `stream=True` no download e processamento. **Justificativa:** Os arquivos da ANS são volumosos. O processamento em memória de uma vez (Opção B) poderia estourar a RAM. A abordagem incremental garante estabilidade.
+  
+* **Inconsistências de CNPJ:** Implementada a estratégia de correção via `.zfill(14)`. **Justificativa:** Garante que o ID da operadora não seja corrompido pela leitura automática do Pandas/Excel que remove zeros à esquerda.
 
-Inicie a aplicação: npm run dev.
+### **2. Banco de Dados (SQL)**
 
-Abra o navegador em: http://localhost:5173.
+* **Normalização:** Escolhida a **Opção B (Tabelas Separadas)**. **Justificativa:** Como os dados cadastrais são estáveis e as despesas são trimestrais, a separação evita redundância e facilita queries analíticas complexas.
+  
+* **Tipos de Dados:** Uso de `DECIMAL(18,2)` para valores monetários. **Justificativa:** Diferente do `FLOAT`, o `DECIMAL` evita erros de arredondamento em cálculos financeiros.
 
-🧠 Trade-offs Técnicos e Justificativas
+### **3. Backend (FastAPI)**
 
-Conforme solicitado no PDF do teste, aqui estão as decisões fundamentadas:
+* **Framework:** Escolhida a **Opção B (FastAPI)**. **Justificativa:** Pela natureza assíncrona, oferece melhor performance para múltiplas requisições simultâneas e gera documentação Swagger automática.
+  
+* **Paginação:** Escolhida a **Opção A (Offset-based)**. **Justificativa:** Ideal para dados históricos e estáveis da ANS, permitindo que o usuário pule para páginas específicas rapidamente.
+  
+* **Estatísticas:** Escolhida a **Opção A (Queries Diretas)**. **Justificativa:** Garante consistência absoluta. Com índices bem aplicados no SQL, o cálculo em tempo real é eficiente e elimina riscos de cache desatualizado.
 
-Backend
+### **4. Frontend (Vue.js)**
 
-Framework (Opção B - FastAPI): Escolhido pela alta performance e documentação Swagger automática. É ideal para uma aplicação que precisa de validação rigorosa de dados (Pydantic).
+* **Arquitetura:** Frontend servido como arquivo estático. **Justificativa:** Aplicação do princípio **KISS**. Elimina a necessidade de o avaliador configurar ambiente Node.js, tornando a execução do teste imediata.
+  
+* **Estratégia de Busca:** Escolhida a **Opção A (Busca no Servidor)**. **Justificativa:** Performance de UX. Filtrar milhares de registros no cliente pesaria o navegador; o filtro via SQL é escalável.
+  
+* **Gerenciamento de Estado:** Escolhida a **Opção C (Composables - Vue 3)**. **Justificativa:** Permite compartilhar reatividade entre componentes de forma modular e leve, sem a sobrecarga de uma biblioteca como Pinia/Vuex.
 
-Paginação (Opção A - Offset-based): Implementada via LIMIT/OFFSET. Como a base de dados da ANS é estática (atualização trimestral), esta estratégia oferece a melhor experiência de navegação para o usuário final.
+---
 
-Estatísticas (Opção A - Queries Diretas): As estatísticas de despesas por UF são calculadas em tempo real. Justifica-se pela consistência absoluta dos dados, eliminando riscos de cache desatualizado.
+## 📊 Análises Adicionais
 
-Frontend
+O arquivo `sql/analise.sql` contém as queries que respondem aos desafios de negócio, como o Top 5 operadoras com maior crescimento e a distribuição de despesas por UF.
 
-Busca/Filtro (Opção A - Busca no Servidor): A filtragem por Razão Social ou CNPJ é feita via API. Justificativa: Carregar milhares de linhas da ANS no navegador prejudicaria a performance (UX). A busca no banco de dados é escalável.
 
-Tratamento de Erros e Loading: O sistema utiliza estados de loading para cada chamada de API e mensagens de erro específicas. Justificativa: Evita que o utilizador pense que a aplicação travou durante o processamento de grandes volumes de dados.
 
-📊 Pipeline de Dados (ETL)
-
-O processo de ingestão de dados foi automatizado nos scripts da pasta scripts/:
-
-Extração: O etapa1_requisicao.py usa stream=True para baixar os ZIPs pesados da ANS em pedaços (chunks), protegendo a memória RAM.
-
-Limpeza: Os dados foram normalizados (remoção de acentos e caracteres especiais) para garantir compatibilidade com o encoding do MySQL.
-
-Integridade: Tratamento de CNPJs com zfill(14) para evitar que o Excel ou o Pandas removam os zeros à esquerda.
-
-📁 Documentação Adicional
-
-A coleção do Postman (Postman_Collection.json) está incluída na raiz para teste imediato de todas as rotas da API.
-
-Candidato: João Lucas Rebouças de Souza Teste: Estagiário de Desenvolvimento/Dados - Intuitive Care.
+---
+**Candidato:** [Seu Nome]
+**E-mail:** [Seu E-mail]
