@@ -47,6 +47,7 @@ LIMIT 5;
 -- QUERY 3: QTD OPERADORAS ACIMA DA MÉDIA EM PELO MENOS 2 TRIMESTRES
 -- ---------------------------------------------------------------------------------------------------------
 
+-- QUANTIDADE TOTAL
 SELECT COUNT(*) AS 'Qtd Operadoras Acima da Média'
 FROM (
     SELECT registro_ans
@@ -55,4 +56,20 @@ FROM (
       AND trimestre IN (1, 2, 3)
     GROUP BY registro_ans, ano
     HAVING COUNT(DISTINCT trimestre) >= 2
-) AS subquery_analise;
+) AS contagem;
+
+-- LISTAGEM DETALHADA
+SELECT 
+    o.RegistroANS, 
+    o.RazaoSocial, 
+    o.UF
+FROM operadoras o
+JOIN (
+    SELECT registro_ans
+    FROM despesas_consolidadas
+    WHERE valor_despesa > (SELECT AVG(valor_despesa) FROM despesas_consolidadas)
+      AND trimestre IN (1, 2, 3)
+    GROUP BY registro_ans, ano
+    HAVING COUNT(DISTINCT trimestre) >= 2
+) AS sub ON o.RegistroANS = sub.registro_ans
+ORDER BY o.RazaoSocial ASC;
