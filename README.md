@@ -1,6 +1,6 @@
 # 🩺 Sistema de Gestão de Operadoras ANS - Teste Estagiário v2.0
 
-Este projeto é uma solução Full Stack desenvolvida para o desafio técnico da **Intuitive Care**. O sistema automatiza o ciclo completo de dados: extração do portal da ANS, tratamento de inconsistências, armazenamento relacional e visualização através de um dashboard interativo.
+Este projeto é uma solução desenvolvida para o desafio técnico da **Intuitive Care**. O sistema automatiza o ciclo completo de dados: extração do portal da ANS, tratamento de inconsistências, armazenamento relacional e visualização através de um dashboard interativo.
 
 ---
 
