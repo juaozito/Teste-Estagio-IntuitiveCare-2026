@@ -104,5 +104,7 @@ O arquivo `sql/analise.sql` contém as queries que respondem aos desafios de neg
 
 ---
 **Candidato:** João Lucas Rebouças de Souza
+
 **E-mail:** reboucasjoao85@gmail.com
+
 **Linkedin:** www.linkedin.com/in/joaolucasreb
