@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard ANS - IntuitiveCare</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
+        .card { background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-left: 5px solid #42b983; padding-left: 15px; }
+        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #f8f9fa; color: #42b983; font-weight: bold; }
+        tr:hover { background-color: #f9fffb; }
+        .loading { text-align: center; color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>Painel de Operadoras ANS</h1>
+        
+        <div class="card">
+            <h3>Distribuição de Despesas por UF</h3>
+            <canvas id="meuGrafico" height="80"></canvas>
+        </div>
+
+        <div class="card">
+            <input type="text" v-model="busca" @input="buscarComDelay" placeholder="Filtrar por Razão Social ou CNPJ...">
+            
+            <div v-if="loading" class="loading">Buscando dados no servidor...</div>
+            
+            <table v-else>
+                <thead>
+                    <tr>
+                        <th>Registro ANS</th>
+                        <th>Razão Social</th>
+                        <th>CNPJ</th>
+                        <th>UF</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="op in operadoras" :key="op.RegistroANS">
+                        <td>{{ op.RegistroANS }}</td>
+                        <td>{{ op.RazaoSocial }}</td>
+                        <td>{{ op.CNPJ }}</td>
+                        <td>{{ op.UF }}</td>
+                    </tr>
+                    <tr v-if="operadoras.length === 0">
+                        <td colspan="4" style="text-align: center;">Nenhuma operadora encontrada.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const operadoras = ref([]);
+                const busca = ref('');
+                const loading = ref(false);
+                let timeout = null;
+
+                // Usamos 127.0.0.1 para evitar problemas de resolução de nome do Windows
+                const api = axios.create({ baseURL: 'http://127.0.0.1:8000/api' });
+
+                const carregarDados = async () => {
+                    loading.value = true;
+                    try {
+                        const res = await api.get('/operadoras', { params: { q: busca.value } });
+                        // Acessando .data.data conforme a estrutura do seu Python
+                        operadoras.value = res.data.data;
+                    } catch (err) {
+                        console.error("Erro ao carregar operadoras:", err);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const carregarGrafico = async () => {
+                    try {
+                        const res = await api.get('/estatisticas'); // Rota correta do seu main.py
+                        const ctx = document.getElementById('meuGrafico');
+                        
+                        // Ajustando para o formato que sua rota 'estatisticas' retorna
+                        // Se for o Top 5, usamos res.data.top_5
+                        const dadosGrafico = res.data.top_5 || res.data; 
+
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: dadosGrafico.map(i => i.RazaoSocial || i.UF),
+                                datasets: [{ 
+                                    label: 'Total de Despesas (R$)', 
+                                    data: dadosGrafico.map(i => i.total), 
+                                    backgroundColor: '#42b983' 
+                                }]
+                            },
+                            options: { responsive: true }
+                        });
+                    } catch (err) {
+                        console.error("Erro ao carregar gráfico:", err);
+                    }
+                };
+
+                // Função para não sobrecarregar o banco enquanto digita
+                const buscarComDelay = () => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(carregarDados, 500);
+                };
+
+                onMounted(() => {
+                    carregarDados();
+                    carregarGrafico();
+                });
+
+                return { operadoras, busca, loading, buscarComDelay };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

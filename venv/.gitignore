@@ -1,17 +1,35 @@
-# Ignorar arquivos de dados (CSVs e Planilhas)
-dados/processados/
-*.csv
-*.xlsx
-
-# Ignorar arquivos SQL gerados automaticamente
-scripts/sql/carga_dados.sql
-
-# Ignorar pastas de ambiente virtual do Python (caso tenha)
-venv/
-.venv/
+# --- Python (Backend) ---
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+build/
+dist/
+.python-version
 
-# Ignorar arquivos de configuração do sistema
+# --- Configurações Sensíveis (IMPORTANTE) ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --- IDEs e Editores ---
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store
-Thumbs.db
+
+# --- Frontend (Node/Geral) ---
+node_modules/
+.npm
+dist-ssr/
+*.local
+
+# --- Banco de Dados ---
+*.sql
+*.sqlite

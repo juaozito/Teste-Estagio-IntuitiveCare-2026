@@ -1,12 +1,23 @@
+# --- Servidor e API ---
+fastapi
+uvicorn
+python-dotenv
+
+# --- Banco de Dados ---
+mysql-connector-python
+
+# --- Web Scraping e Processamento de Dados ---
 beautifulsoup4==4.14.3
+pandas==3.0.0
+numpy==2.4.1
+requests==2.32.5
+lxml==6.0.2
+
+# --- Utilitários e Dependências de Suporte ---
 certifi==2026.1.4
 charset-normalizer==3.4.4
 idna==3.11
-lxml==6.0.2
-numpy==2.4.1
-pandas==3.0.0
 python-dateutil==2.9.0.post0
-requests==2.32.5
 six==1.17.0
 soupsieve==2.8.3
 typing_extensions==4.15.0
