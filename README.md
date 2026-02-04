@@ -1,117 +1,116 @@
-🩺 Sistema de Gestão de Operadoras ANS - Teste Estagiário v2.0
-Este projeto é uma solução completa para o desafio técnico da Intuitive Care. O sistema automatiza o ciclo completo de dados da ANS: extração do portal, tratamento de inconsistências, integração de bases (Join), armazenamento relacional e visualização através de um dashboard interativo.
+# 🩺 Sistema de Gestão de Operadoras ANS - Teste Estagiário v2.0
 
-📂 Estrutura do Projeto
+Este projeto é uma solução completa para o desafio técnico da **Intuitive Care**. O sistema automatiza o ciclo completo de dados da ANS: extração do portal, tratamento de inconsistências, integração de bases (**Join**), armazenamento relacional e visualização através de um dashboard interativo.
 
-scripts/: Pipeline de dados (ETL) desenvolvida em Python e Pandas.
+---
 
-backend/: API REST desenvolvida com FastAPI, configurada para servir também os arquivos estáticos do frontend.
+## 📂 Estrutura do Projeto
 
-frontend/: Interface Single Page Application (SPA) com Vue.js 3 via CDN.
+* **`scripts/`**: Pipeline de dados (ETL) desenvolvida em Python e Pandas.
+  
+* **`backend/`**: API REST desenvolvida com **FastAPI**, configurada para servir também os arquivos estáticos do frontend.
+  
+* **`frontend/`**: Interface Single Page Application (SPA) com **Vue.js 3 via CDN**.
+  
+* **`sql/`**: Scripts de estrutura (`schema.sql`) e consultas analíticas de negócio (`analise.sql`).
 
-sql/: Scripts de estrutura (schema.sql) e consultas analíticas de negócio (analise.sql).
+---
 
-🛠️ Pré-requisitos
+## 🛠️ Pré-requisitos
 
-1. Programas Necessários
+### **1. Programas Necessários**
+
+* **Python 3.10+** (Testado e compatível com Python 3.14).
+  
+* **MySQL Server 8.0**.
+  
+* **Navegador Web** (Chrome, OperaGX, Firefox ou Edge).
+  
+* **Ativar Ambiente Virtual (Caso não esteja ativado)**: `python -m venv venv` -> `.\venv\Scripts\activate`
+  
+* **Instale as dependências (Dentro do Projeto, no Terminal do VSCode, e certifique-se de que o ambiente virtual está ativo):** `pip install -r ../requirements.txt`.
+
+---
+
+## ⚙️ 2. Pipeline de Dados (ETL) e Transformação
+
+
+
+O pipeline foi desenhado para ser resiliente a variações de formatos e garantir a integridade referencial entre os dados financeiros e cadastrais. **Execute os scripts na pasta `scripts/` seguindo esta ordem exata:**
+
+1.  `python scripts/etapa1_requisicao.py`
    
-Python 3.10+ (Testado e compatível com Python 3.14).
+    * **Integração com API Pública**: Acessa a API de Dados Abertos da ANS e realiza o download das Demonstrações Contábeis.
 
-MySQL Server 8.0.
-
-Navegador Web (Chrome, OperaGX, Firefox ou Edge).
-
-⚙️ 2. Pipeline de Dados (ETL) e Transformação
-
-O pipeline foi desenhado para ser resiliente a variações de formatos e garantir a integridade referencial entre os dados financeiros e cadastrais. Execute os scripts na pasta scripts/ seguindo esta ordem exata:
-
-python scripts/etapa1_requisicao.py
-
-Integração com API Pública: Acessa a API de Dados Abertos da ANS, identifica os últimos 3 trimestres disponíveis e realiza o download dos arquivos de Demonstrações Contábeis.
-
-python scripts/etapa1_processamento.py
-
-Processamento de Arquivos: Extrai os arquivos ZIP, identifica dados de despesas com eventos/sinistros e normaliza diferentes formatos (CSV, TXT, XLSX).
-
-Trade-off técnico (Processamento): Foi escolhido o processamento incremental.
-
-Justificativa: Devido ao grande volume de dados, evita o estouro de memória RAM e garante a escalabilidade.
-
-python scripts/etapa2_cadastral.py
-
-Enriquecimento e Validação: Baixa os dados cadastrais das operadoras ativas e implementa validações de CNPJ, valores numéricos e campos obrigatórios.
-
-Tratamento de Inconsistências: CNPJs duplicados ou com razões sociais diferentes foram corrigidos ou marcados para garantir a unicidade.
-
-python scripts/etapa2_join.py
-
-Integração de Bases: Realiza o join entre os dados de despesas e o cadastro usando o CNPJ como chave.
-
-Trade-off técnico (Join): Realizado em memória utilizando a biblioteca Pandas antes da persistência.
-
-Justificativa: Simplifica o tratamento de registros sem correspondência e permite a normalização antes da inserção no banco.
-
-python scripts/etapa2_agregacao.py
-
-Agregação com Múltiplas Estratégias: Agrupa os dados por operadora e UF, calculando total, média por trimestre e desvio padrão.
-
-Trade-off técnico (Ordenação): Ordenação baseada no valor total decrescente.
-
-python scripts/etapa3_banco_dados.py
-
-Persistência e Análise: Estrutura as tabelas e importa o conteúdo dos arquivos CSV normalizados para o MySQL 8.0.
-
-Trade-off técnico (Normalização): Adotada a Opção B (Tabelas normalizadas separadas).
-
-🧠 Trade-offs Técnicos e Justificativas (Requisitos PDF v2.0)
-
-Abaixo estão as decisões fundamentadas tomadas durante o desenvolvimento:
-
-1. Processamento de Dados (ETL)
    
-Processamento Incremental: Utilização de stream=True. Justificativa: Os arquivos da ANS são volumosos; a abordagem incremental garante estabilidade contra estouro de RAM.
-
-Inconsistências de CNPJ: Correção via .zfill(14). Justificativa: Impede que a leitura automática do Pandas remova zeros à esquerda, corrompendo o ID.
-
-2. Banco de Dados (SQL)
+2.  `python scripts/etapa1_processamento.py`
    
-Normalização (Opção B): Tabelas Separadas. Justificativa: Cadastro estável e despesas trimestrais; a separação evita redundância e facilita queries analíticas.
+    * **Processamento de Arquivos**: Extrai ZIPs e normaliza diferentes formatos (CSV, TXT, XLSX).
+    * **Trade-off técnico**: Escolhido o **processamento incremental**.
+    * **Justificativa**: Evita estouro de RAM ao lidar com arquivos de centenas de MBs.
 
-Tipos de Dados: Uso de DECIMAL(18,2). Justificativa: Evita erros de arredondamento comuns em tipos FLOAT em cálculos financeiros.
-
-3. Backend (FastAPI)
    
-Framework: FastAPI. Justificativa: Alta performance assíncrona e geração automática de documentação Swagger.
-
-Paginação: Offset-based. Justificativa: Ideal para dados históricos, permitindo pular para páginas específicas rapidamente.
-
-4. Frontend (Vue.js)
+3.  `python scripts/etapa2_cadastral.py`
    
-Arquitetura: Servido como arquivo estático (KISS). Justificativa: Elimina a necessidade de ambiente Node.js para o avaliador, tornando a execução imediata.
+    * **Enriquecimento e Validação**: Baixa os dados das operadoras ativas e valida CNPJs.
 
-Busca no Servidor: Processamento via SQL para garantir performance e escalabilidade ao lidar com milhares de registros.
+      
+4.  `python scripts/etapa2_join.py`
+   
+    * **Integração de Bases**: Realiza o *join* entre despesas e cadastro usando o CNPJ.
+    * **Trade-off técnico**: Join realizado em memória com **Pandas**.
 
-🗄️ 3. Configuração do Banco de Dados
+      
+5.  `python scripts/etapa2_agregacao.py`
+    
+    * **Agregação**: Calcula total, média trimestral e desvio padrão por operadora/UF.
 
-No seu MySQL, vá em File -> Open SQL Script e adicione o arquivo sql/schema.sql para criar as tabelas.
+   
+6.  `python scripts/etapa3_banco_dados.py`
+    
+    * **Persistência**: Estrutura as tabelas e importa o conteúdo para o MySQL 8.0.
 
-Execute o script de carga gerado após a execução dos scripts de ETL.
+---
 
-Execute o arquivo sql/analise.sql para validar as métricas de negócio.
+## 🧠 Trade-offs Técnicos e Justificativas (Requisitos PDF v2.0)
 
-🚀 4. Interface e API (Execução Unificada)
+### **1. Processamento de Dados (ETL)**
 
-Acesse a pasta backend.
+* **Processamento Incremental**: Utilização de `stream=True`. **Justificativa**: Estabilidade contra falhas de memória em arquivos volumosos.
+  
+* **Inconsistências de CNPJ**: Tratamento via `.zfill(14)`. **Justificativa**: Impede que o Pandas corrompa a chave de identificação ao remover zeros à esquerda.
 
-Instale as dependências: pip install -r ../requirements.txt.
+### **2. Banco de Dados (SQL)**
 
-Configure o arquivo .env com suas credenciais do MySQL.
+* **Normalização (Opção B)**: Uso de tabelas separadas. **Justificativa**: Evita redundância e facilita queries complexas.
+  
+* **Tipos de Dados**: Uso de `DECIMAL(18,2)`. **Justificativa**: Precisão absoluta para cálculos financeiros.
 
-Rode o comando: python main.py.
+---
 
-Abra o navegador em: http://localhost:8000
+## 🗄️ 3. Configuração do Banco de Dados
 
-📊 Análises Adicionais
-O arquivo sql/analise.sql contém as queries que respondem aos desafios de negócio, como o Top 5 operadoras com maior crescimento e a distribuição de despesas por UF.
+1.  No **MySQL Workbench**, acesse `File` -> `Open SQL Script` e execute o arquivo `sql/schema.sql`.
+   
+2.  O script de carga é gerado automaticamente após a execução da **Etapa 6** do Pipeline, adicione-o (mesmo processo anterior) e execute-o.
+   
+3.  Utilize o arquivo `sql/analise.sql` para validar as métricas de negócio requisitadas.
 
-Candidato: João Lucas Rebouças de Souza E-mail: reboucasjoao85@gmail.com Linkedin: www.linkedin.com/in/joaolucasreb
+---
+
+## 🚀 4. Interface e API (Execução Unificada)
+
+1.  Acesse a pasta do backend: `cd backend`.
+   
+3.  Instale as dependências: `pip install -r ../requirements.txt`.
+   
+5.  Configure o arquivo `.env` com suas credenciais do MySQL.
+6.  Rode o servidor: `python main.py`.
+7.  Abra o navegador em: **http://localhost:8000**
+
+---
+
+**Candidato:** João Lucas Rebouças de Souza
+**E-mail:** reboucasjoao85@gmail.com
+**Linkedin:** https://www.linkedin.com/in/joaolucasreb
+EOF
