@@ -92,25 +92,27 @@ O pipeline foi desenhado para ser resiliente a variações de formatos e garanti
 
 1.  No **MySQL Workbench**, acesse `File` -> `Open SQL Script` e execute o arquivo `sql/schema.sql`.
    
-2.  O script de carga é gerado automaticamente após a execução da **Etapa 6** do Pipeline, adicione-o (mesmo processo anterior) e execute-o.
+2.  O script de carga é gerado automaticamente após a execução da **Etapa 6** do Pipeline (localizado dentro da pasta `scripts/sql/carga_dados`), adicione-o e execute-o.
    
 3.  Utilize o arquivo `sql/analise.sql` para validar as métricas de negócio requisitadas.
 
 ---
 
 ## 🚀 4. Interface e API (Execução Unificada)
-
-1.  Acesse a pasta do backend: `cd backend`.
    
-3.  Instale as dependências: `pip install -r ../requirements.txt`.
+1.  Instale as dependências: `pip install -r ../requirements.txt`.
    
-5.  Configure o arquivo `.env` com suas credenciais do MySQL.
-6.  Rode o servidor: `python main.py`.
-7.  Abra o navegador em: **http://localhost:8000**
+2.  Configure o arquivo `.env` com suas credenciais do MySQL.
+   
+3.  Rode o servidor: `python main.py`. (Na raiz da pasta)
+   
+4.  Abra o navegador em: **http://localhost:8000**
 
 ---
 
 **Candidato:** João Lucas Rebouças de Souza
+
 **E-mail:** reboucasjoao85@gmail.com
+
 **Linkedin:** https://www.linkedin.com/in/joaolucasreb
-EOF
+
