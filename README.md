@@ -9,11 +9,11 @@ Este projeto é uma solução completa para o desafio técnico da **Intuitive Ca
 * **`scripts/`**: Pipeline de dados (ETL) desenvolvida em Python e Pandas.
   
 * **`backend/`**: API REST desenvolvida com **FastAPI**, configurada para servir também os arquivos estáticos do frontend.
+
+* **`sql/`**: Scripts de estrutura (`schema.sql`) e consultas analíticas de negócio (`analise.sql`).
   
 * **`frontend/`**: Interface Single Page Application (SPA) com **Vue.js 3 via CDN**.
   
-* **`sql/`**: Scripts de estrutura (`schema.sql`) e consultas analíticas de negócio (`analise.sql`).
-
 ---
 
 ## 🛠️ Pré-requisitos
@@ -22,7 +22,7 @@ Este projeto é uma solução completa para o desafio técnico da **Intuitive Ca
 
 * **Python 3.10+** (Testado e compatível com Python 3.14).
   
-* **MySQL Server 8.0**.
+* **MySQL Server 8.0**. (Configurado)
   
 * **Navegador Web** (Chrome, OperaGX, Firefox ou Edge).
   
@@ -69,6 +69,8 @@ O pipeline foi desenhado para ser resiliente a variações de formatos e garanti
 6.  `python scripts/etapa3_banco_dados.py`
     
     * **Persistência**: Estrutura as tabelas e importa o conteúdo para o MySQL 8.0.
+  
+7.  Logo após executar todos, abra a pasta `dados` e visualize os arquivos gerados em `processados` e `raw`
 
 ---
 
@@ -95,6 +97,8 @@ O pipeline foi desenhado para ser resiliente a variações de formatos e garanti
 2.  O script de carga é gerado automaticamente após a execução da **Etapa 6** do Pipeline (localizado dentro da pasta `scripts/sql/carga_dados`), adicione-o e execute-o.
    
 3.  Utilize o arquivo `sql/analise.sql` para validar as métricas de negócio requisitadas.
+   
+4.  NÃO Feche o MySQL.
 
 ---
 
