@@ -29,10 +29,10 @@ inconsistências, integração de bases (Join), armazenamento relacional e visua
 * **Navegador Web** (Chrome, Firefox ou Edge).
 
 ### 2. Configuração do Banco de Dados
-
-1.  No seu MySQL, crie o schema: `CREATE DATABASE intuitivecare;`.
    
-2.  Execute o arquivo `sql/schema.sql` para criar as tabelas e relações necessárias.
+1.  No seu MySQL, execute o arquivo `sql/schema.sql` para criar as tabelas e relações necessárias.
+2.  Adicone o 'carga_dados.sql' gerado logo após você executar os scripts
+3.  Execute a 'analise.aql' para mostrar a respostas das queries.
 
 ### ⚙️ 3. Pipeline de Dados (ETL)
 
